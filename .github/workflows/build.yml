@@ -1,0 +1,47 @@
+name: Build followers feed
+
+# This workflow runs on a five‑minute schedule and whenever the workflow is
+# dispatched manually.  It uses Node.js 18 to execute the build script and
+# commits the generated JSON feed if it has changed.  Secrets are passed via
+# environment variables – they are never written to disk or logged.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install dependencies (none needed)
+        run: |
+          echo "No dependencies to install"
+      - name: Build followers feed
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          BROADCASTER_LOGIN: ${{ secrets.BROADCASTER_LOGIN }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+        run: |
+          node buildFollowers.mjs
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          # Only commit if followers.json was modified
+          if ! git diff --quiet; then
+            git add public/data/followers.json
+            git commit -m "Update followers feed"
+            git push
+          else
+            echo "No changes detected"
+          fi
