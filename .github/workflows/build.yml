@@ -1,9 +1,9 @@
 name: Build followers feed
 
-# This workflow runs on a five‑minute schedule and whenever the workflow is
-# dispatched manually.  It uses Node.js 18 to execute the build script and
-# commits the generated JSON feed if it has changed.  Secrets are passed via
-# environment variables – they are never written to disk or logged.
+# This workflow runs on a five minute schedule and whenever the workflow is
+# dispatched manually. It uses Node.js 18 to execute the build script and
+# commits the generated JSON feed if it has changed. Secrets are passed via
+# environment variables - they are never written to disk or logged.
 on:
   schedule:
     - cron: '*/5 * * * *'
@@ -39,9 +39,24 @@ jobs:
           git config user.email "actions@github.com"
           # Only commit if followers.json was modified
           if ! git diff --quiet; then
-            git add public/data/followers.json
+            git add docs/data/followers.json
             git commit -m "Update followers feed"
             git push
           else
             echo "No changes detected"
           fi
+      - name: Deploy to Hostinger
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          echo "Starting deployment"
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+          rsync -az --delete -e "ssh -p 65002 -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" docs/ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH
+          rm -f ~/.ssh/id_ed25519
+          echo "Deployment finished"
