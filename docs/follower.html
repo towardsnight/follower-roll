@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TN Follower Roll</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+    /* ---------- FONTS + LIVE VARS ---------- */
+    @font-face {
+        font-family: "Cal Sans";
+        src: url("https://unpkg.com/@calcom/font/dist/cal-sans.woff2") format("woff2");
+        font-weight: 400 700;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    :root {
+        --panel-w: 300px;
+        --panel-pad: 60px;
+        --slot-bg: rgba(0, 0, 0, .85);
+        --slot-border: #ffffff;
+        --user-color: #FFEB3B;
+        --user-size: 1.5rem;
+        --user-font: "Cal Sans", "sans-serif";
+        --num-color: #ffffff;
+        --num-size: 1.5rem;
+        --num-font: "Roboto", "sans-serif";
+        --role-color: #00ffff;
+        --role-size: 1.375rem;
+        --role-font: "Arial Bold", "Arial", "sans-serif";
+        --icon-size: 1.3125rem;
+        --date-color: #FFEB3B;
+        --date-size: 1.5rem;
+        --days-color: #cccccc;
+        --days-size: 1.5rem;
+        --sub-color: #ffb400;
+        --sub-size: 1.5rem;
+        --bits-color: #ff7ee6;
+        --bits-size: 1.5rem;
+        --tip-color: #7cff93;
+        --tip-size: 1.5rem;
+        --pic-sz: 160px;
+        --heading-color: #000;
+        --heading-size: 1.6rem;
+        --heading-font: "Roboto", "sans-serif";
+        --tint-on: 0;
+        --tint-top: #260000;
+        --tint-bottom: #3b0000;
+    }
+    /* ---------- RESET / BASE ---------- */
+
+    *, *:before, *:after {
+        box-sizing: border-box
+    }
+
+    html, body {
+        margin: 0;
+        height: 100%;
+        font-family: var(--user-font)
+    }
+
+    a {
+        color: inherit;
+        text-decoration: none
+    }
+    /* ---------- BACKGROUND ---------- */
+
+    #bgvideo {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: -2
+    }
+
+    body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background: linear-gradient(var(--tint-top), var(--tint-bottom));
+        opacity: var(--tint-on)
+    }
+    /* ---------- GEAR BUTTON ---------- */
+
+    #gearToggle {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 12;
+        font-size: 1.5rem;
+        background: none;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        filter: drop-shadow(0 0 3px #000)
+    }
+    /* ---------- CONTROL PANEL ---------- */
+
+    #panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: var(--panel-w);
+        height: 100%;
+        overflow: auto;
+        background: #1c0000d0;
+        padding: 18px;
+        backdrop-filter: blur(6px);
+        transition: transform .35s ease;
+        z-index: 11
+    }
+
+    #panel.collapsed {
+        transform: translateX(calc(-1 * var(--panel-w)))
+    }
+
+    #panel h3 {
+        margin: 16px 0 6px;
+        font: 700 .95rem/1 "Roboto", sans-serif;
+        color: #ffd
+    }
+
+    #panel label {
+        display: block;
+        margin: 6px 0;
+        font: .85rem/1 "Lato", sans-serif;
+        color: #fff
+    }
+
+    #panel input, #panel select, #panel button {
+        margin-left: 6px;
+        padding: 0 4px;
+        font: .85rem "Roboto", sans-serif
+    }
+
+    .roleChk {
+        display: inline-flex;
+        align-items: center;
+        margin: 3px 6px 0 0;
+        color: #fff;
+        font: .82rem/1 "Roboto", sans-serif
+    }
+
+    #toolRow {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 40px 0 20px
+    }
+
+    #toolRow select {
+        margin-left: 0
+    }
+
+    #toolRow label {
+        color: #fff;
+        font: .8rem "Roboto", sans-serif;
+        display: flex;
+        align-items: center;
+        gap: 6px
+    }
+
+    #toolRow button {
+        padding: 2px 8px;
+        cursor: pointer
+    }
+
+    #speedRange {
+        width: 60px
+    }
+    /* ---------- STAGE ---------- */
+
+    #stage {
+        margin-left: calc(var(--panel-w) + 60px);
+        height: 100vh;
+        padding: 22px 22px 22px 0;
+        background: rgba(0, 0, 0, .15);
+        backdrop-filter: blur(3px);
+        transition: margin-left .35s
+    }
+
+    #panel.collapsed + #stage {
+        margin-left: var(--panel-pad)
+    }
+
+    h1 {
+        margin: 0 0 14px;
+        background: #fff;
+        padding: 6px 8px;
+        font: 700 var(--heading-size) /1 var(--heading-font);
+        color: var(--heading-color);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis
+    }
+
+    #scrollBox {
+        height: calc(100vh - 130px);
+        overflow: auto;
+        scroll-behavior: smooth
+    }
+    /* ---------- FOLLOWER CARD ---------- */
+
+    .follow-item {
+        display: flex;
+        gap: 12px;
+        margin: 0 0 14px;
+        padding: 12px;
+        width: 100%;
+        background: var(--slot-bg);
+        border: 2px solid var(--slot-border);
+        transition: .2s;
+        transform-origin: center;
+        cursor: pointer
+    }
+
+    .follow-item:hover {
+        transform: scale(1.03);
+        background: #001133e0
+    }
+
+    .pic {
+        width: var(--pic-sz);
+        height: var(--pic-sz);
+        object-fit: cover;
+        border-radius: 6px;
+        flex: none
+    }
+
+    .line1 {
+        font: 700 var(--user-size) /1 var(--user-font);
+        color: var(--user-color)
+    }
+
+    .line1 .num {
+        color: var(--num-color);
+        font: 700 var(--num-size) /1 var(--num-font);
+        margin-right: 4px
+    }
+
+    .roleLine {
+        margin: 3px 0;
+        font: var(--role-size) /1 var(--role-font);
+        color: var(--role-color);
+        display: inline-block;
+        line-height: 1.2
+    }
+
+    .roleLine .icon {
+        font-size: var(--icon-size);
+        margin-right: 4px
+    }
+
+    .subLine {
+        color: var(--sub-color);
+        font: 700 var(--sub-size) /1 "Roboto", sans-serif
+    }
+
+    .bitsLine {
+        color: var(--bits-color);
+        font: 700 var(--bits-size) /1 "Roboto", sans-serif
+    }
+
+    .tipLine {
+        color: var(--tip-color);
+        font: 700 var(--tip-size) /1 "Roboto", sans-serif
+    }
+
+    .date {
+        margin: 3px 0;
+        font: var(--date-size) /1 "Roboto", sans-serif;
+        color: var(--date-color)
+    }
+
+    .days {
+        font: var(--days-size) /1 "Roboto", sans-serif;
+        color: var(--days-color)
+    }
+    </style>
+</head>
+<body>
+
+    <video id="bgvideo" src="https://towardsnight.com/images/sky3.webm" autoplay muted loop playsinline></video>
+    <button id="gearToggle">⚙</button>
+
+    <!-- PANEL -->
+    <div id="panel" class="collapsed">
+        <div id="toolRow">
+            <select id="sortSel">
+                <option value="daysDesc">Days ↘ (oldest)</option>
+                <option value="daysAsc">Days ↗ (newest)</option>
+                <option value="alpha">Alphabetical</option>
+                <option value="giftDesc">Gift Subs ↘</option>
+                <option value="bitsDesc">Bits ↘</option>
+                <option value="tipsDesc">Tips ↘</option>
+                <option value="shuffle">Shuffle</option>
+            </select>
+            <label>
+                Speed
+                      
+                <input type="range" id="speedRange" min="50" max="100" value="40">
+                <button id="toggleScroll">▶︎</button>
+            </label>
+            <button id="toTopBtn">Top ⬆</button>
+            <button id="up5Btn">Up 5 ⬆</button>
+            <button id="down5Btn">Down 5 ⬇</button>
+        </div>
+
+        <!-- ROLE FILTERS -->
+        <h3>🔎 Show Roles</h3>
+        <label class="roleChk">
+            <input type="checkbox" id="filterAll">
+             Select All
+        </label>
+        <label class="roleChk">
+            <input type="checkbox" class="roleBox" id="filterMod">
+             ⚔️ Moderator
+        </label>
+        <label class="roleChk">
+            <input type="checkbox" class="roleBox" id="filterVIP">
+             💎 VIP
+        </label>
+        <label class="roleChk">
+            <input type="checkbox" class="roleBox" id="filterArtist">
+             🎨 Artist
+        </label>
+        <label class="roleChk">
+            <input type="checkbox" class="roleBox" id="filterTier3">
+             🏆 Tier 3
+        </label>
+        <label class="roleChk">
+            <input type="checkbox" class="roleBox" id="filterTier2">
+             🥈 Tier 2
+        </label>
+
+        <!-- STYLE CUSTOMISER (unchanged) -->
+        <h3>📸 Pic</h3>
+        <label>
+            Size 
+            <input type="number" id="picSize" value="160" min="40" max="200">
+             px
+        </label>
+        <h3>👤 Username + #</h3>
+        <label>
+            # Color 
+            <input type="color" id="numColor" value="#ffffff">
+        </label>
+        <label>
+            # Size 
+            <input type="number" id="numSize" value="24">
+        </label>
+        <label>
+            User Color 
+            <input type="color" id="userColor" value="#FFEB3B">
+        </label>
+        <label>
+            User Size 
+            <input type="number" id="userSize" value="24">
+        </label>
+        <h3>🏷 Role Line</h3>
+        <label>
+            Icon Size 
+            <input type="number" id="iconSize" value="21">
+        </label>
+        <label>
+            Color 
+            <input type="color" id="roleColor" value="#00ffff">
+        </label>
+        <label>
+            Size 
+            <input type="number" id="roleSize" value="22">
+        </label>
+        <h3>⭐ Sub / 🔸 Bits / 💚 Tips</h3>
+        <label>
+            Sub Color 
+            <input type="color" id="subColor" value="#ffb400">
+        </label>
+        <label>
+            Sub Size 
+            <input type="number" id="subSize" value="24">
+        </label>
+        <label>
+            Bits Color 
+            <input type="color" id="bitsColor" value="#ff7ee6">
+        </label>
+        <label>
+            Bits Size 
+            <input type="number" id="bitsSize" value="24">
+        </label>
+        <label>
+            Tips Color 
+            <input type="color" id="tipColor" value="#7cff93">
+        </label>
+        <label>
+            Tips Size 
+            <input type="number" id="tipSize" value="24">
+        </label>
+        <h3>📅 Date</h3>
+        <label>
+            Color 
+            <input type="color" id="dateColor" value="#bbbbbb">
+        </label>
+        <label>
+            Size 
+            <input type="number" id="dateSize" value="24">
+        </label>
+        <br>
+        <br>
+        <br>
+        <h3>⌛ Days-ago</h3>
+        <label>
+            Color 
+            <input type="color" id="daysColor" value="#cccccc">
+        </label>
+        <label>
+            Size 
+            <input type="number" id="daysSize" value="24">
+        </label>
+        <h3>🎨 Block</h3>
+        <label>
+            BG 
+            <input type="color" id="slotBG" value="#000000">
+        </label>
+        <label>
+            Border 
+            <input type="color" id="slotBorder" value="#ffffff">
+        </label>
+        <h3>🌈 Tint</h3>
+        <label>
+            <input type="checkbox" id="tintEnable">
+             Enable
+        </label>
+        <label>
+            Top 
+            <input type="color" id="tintTop" value="#260000">
+        </label>
+        <label>
+            Bot 
+            <input type="color" id="tintBottom" value="#3b0000">
+        </label>
+    </div>
+
+    <!-- STAGE -->
+    <div id="stage">
+        <h1 id="heading">ALL FOLLOWERS</h1>
+        <div id="scrollBox">
+            <div id="followerList"></div>
+        </div>
+    </div>
+
+    <script>
+    /* ---------- GLOBAL MAPS ---------- */
+    // These data structures mirror the ones used in the original front‑end.  They
+    // are populated from the server‑generated JSON feed instead of calling
+    // Twitch directly.
+    let broadcasterID = '';
+    const subSet = new Set(),
+        bitsMap = new Map(),
+        giftMap = new Map(),
+        tipMap = new Map(),
+        overrideSet = new Set();
+    let raw = [];
+
+    /* ---------- INITIAL DATA LOAD ---------- */
+    (async () => {
+        try {
+            // Fetch the pre‑built JSON feed.  This file is generated by the
+            // GitHub Action and contains all follower records with precomputed
+            // extras (subscriber status, gift counts, bits, tips, avatar URL, etc.).
+            const resp = await fetch('data/followers.json');
+            const json = await resp.json();
+            raw = json.records || [];
+            // Convert date strings back into Date objects
+            raw.forEach(r => {
+                r.date = new Date(r.date);
+            });
+            // Populate the global sets/maps
+            raw.forEach(r => {
+                const login = r.login;
+                if (r.sub) subSet.add(login);
+                if (r.gifts) giftMap.set(login, r.gifts);
+                if (r.bits) bitsMap.set(login, r.bits);
+                if (r.tips) tipMap.set(login, r.tips);
+                if (r.override) overrideSet.add(login);
+            });
+            // Sort by days descending by default and assign follower numbers in case
+            // any are missing
+            raw.sort((a, b) => b.days - a.days);
+            raw.forEach((r, i) => {
+                if (!r.fNum) r.fNum = i + 1;
+            });
+            render();
+        } catch (err) {
+            console.error('Failed to load followers feed', err);
+        }
+    })();
+
+    /* ---------- ROLE FILTER LOGIC ---------- */
+    const roleChecks = {
+        mod: filterMod,
+        vip: filterVIP,
+        artist: filterArtist,
+        tier3: filterTier3,
+        tier2: filterTier2
+    };
+    filterAll.onchange = e => {
+        Object.values(roleChecks).forEach(c => c.checked = e.target.checked);
+        render(sortSel.value);
+    };
+    Object.values(roleChecks).forEach(c => c.onchange = () => {
+        filterAll.checked = Object.values(roleChecks).every(b => b.checked);
+        render(sortSel.value);
+    });
+    const activeRoles = () => {
+        const a = Object.entries(roleChecks).filter(([_, c]) => c.checked).map(([k]) => k);
+        return a.length ? a : null;
+    };
+
+    /* ---------- HEADING HELPER ---------- */
+    const headingEl = document.getElementById('heading');
+    function updateHeading(order) {
+        const sortMap = {
+            giftDesc: 'TOP SUB GIFTERS',
+            bitsDesc: 'TOP BIT CHEERS',
+            tipsDesc: 'TOP TIPPERS'
+        };
+        if (sortMap[order]) {
+            headingEl.textContent = sortMap[order];
+            return;
+        }
+        const roles = activeRoles();
+        if (!roles) {
+            headingEl.textContent = 'ALL FOLLOWERS';
+            return;
+        }
+        const labelMap = {
+            mod: 'MODERATORS',
+            vip: 'VIPS',
+            artist: 'ARTISTS',
+            tier3: 'TIER 3',
+            tier2: 'TIER 2'
+        };
+        const orderArr = ['mod', 'vip', 'artist', 'tier3', 'tier2'];
+        headingEl.textContent = orderArr.filter(r => roles.includes(r)).map(r => labelMap[r]).join(' + ') || 'ALL FOLLOWERS';
+    }
+
+    /* ---------- RENDER ---------- */
+    const listDiv = document.getElementById('followerList');
+    async function render(order='daysDesc') {
+        updateHeading(order);
+        let arr = [...raw];
+        switch (order) {
+        case 'shuffle':
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            break;
+        case 'alpha':
+            arr.sort((a, b) => a.display.localeCompare(b.display));
+            break;
+        case 'daysAsc':
+            arr.sort((a, b) => a.days - b.days || b.fNum - a.fNum);
+            break;
+        case 'giftDesc':
+            arr.sort((a, b) => (giftMap.get(b.login) || 0) - (giftMap.get(a.login) || 0) || a.fNum - b.fNum);
+            break;
+        case 'bitsDesc':
+            arr.sort((a, b) => (bitsMap.get(b.login) || 0) - (bitsMap.get(a.login) || 0) || a.fNum - b.fNum);
+            break;
+        case 'tipsDesc':
+            arr.sort((a, b) => (tipMap.get(b.login) || 0) - (tipMap.get(a.login) || 0) || a.fNum - b.fNum);
+            break;
+        default:
+            arr.sort((a, b) => b.days - a.days || a.fNum - b.fNum);
+        }
+        const roles = activeRoles();
+        if (roles) {
+            arr = arr.filter(p =>
+            (roles.includes('artist') && p.art) || (roles.includes('mod') && p.mod) || (roles.includes('vip') && p.vip) ||
+            (roles.includes('tier3') && p.t3) || (roles.includes('tier2') && p.t2));
+        }
+        listDiv.innerHTML = '';
+        arr.forEach(p => {
+            const login = p.login;
+            // Choose avatar: override images will be attempted first, then custom avatar from JSON, then default placeholder
+            let avatarHTML;
+            const defaultAvatar = p.avatar || 'https://static-cdn.jtvnw.net/jtv_user_pictures/xarth/404_user_70x70.png';
+            if (overrideSet.has(login)) {
+                const jpg = 'overridepic/' + login + '.jpg';
+                const png = 'overridepic/' + login + '.png';
+                avatarHTML = `<img class="pic" src="${jpg}" data-png="${png}" data-default="${defaultAvatar}"
+                    onerror="\n                      if(!this.dataset.tried){this.dataset.tried='jpg';this.src=this.dataset.png;}\n                      else if(this.dataset.tried==='jpg'){this.dataset.tried='png';this.src=this.dataset.default;}\n                    ">`;
+            } else {
+                avatarHTML = `<img class="pic" src="${defaultAvatar}" alt="">`;
+            }
+            /* role line */
+            const rl = [];
+            if (p.mod)
+                rl.push('⚔️ MODERATOR');
+            if (p.vip)
+                rl.push('💎 VIP');
+            if (p.t3)
+                rl.push('🏆 Tier 3');
+            if (p.t2)
+                rl.push('🥈 Tier 2');
+            if (p.art)
+                rl.push('🎨 ARTIST');
+            const roleHTML = rl.map(t => {
+                const [ico, ...txt] = t.split(' ');
+                return `<span class="icon">${ico}</span>${txt.join(' ')}`;
+            }).join('<br>');
+            /* extras */
+            const subHTML = subSet.has(login) ? `<br><span class="subLine">⭐ SUB</span>` : '';
+            const gifts = giftMap.get(login) || 0;
+            const giftHTML = gifts ? `<br><span class="subLine">🎁 ${gifts.toLocaleString()} gifts</span>` : '';
+            const bits = bitsMap.get(login) || 0;
+            const bitsHTML = bits ? `<br><span class="bitsLine">🔸 ${bits.toLocaleString()} bits</span>` : '';
+            const tipsAmt = tipMap.get(login) || 0;
+            const tipsHTML = tipsAmt ? `<br><span class="tipLine">💚 $${tipsAmt.toFixed(2)}</span>` : '';
+            listDiv.insertAdjacentHTML('beforeend', `
+      <a class="follow-item" href="https://twitch.tv/${login}" target="_blank">
+        ${avatarHTML}
+        <div>
+          <span class="line1"><span class="num">#${p.fNum}</span> ${p.display}</span><br>
+          <span class="roleLine">${roleHTML}</span>${subHTML}${giftHTML}${bitsHTML}${tipsHTML}<br>
+          <span class="date">${p.date.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'})}</span><br>
+          <span class="days">${p.days} days ago</span>
+        </div>
+      </a>`);
+        });
+    }
+
+    /* ---------- SCROLLING / SHORTCUTS ---------- */
+    const box = document.getElementById('scrollBox');
+    let raf = null;
+    function step() {
+        box.scrollTop += speedRange.value / 50;
+        if (box.scrollTop + box.clientHeight >= box.scrollHeight)
+            box.scrollTop = 0;
+        raf = requestAnimationFrame(step);
+    }
+    toggleScroll.onclick = () => raf ? (cancelAnimationFrame(raf), raf = null, toggleScroll.textContent = '▶︎') : (step(), toggleScroll.textContent = '⏸︎');
+    speedRange.oninput = () => {
+        if (raf) {
+            cancelAnimationFrame(raf);
+            step();
+        }
+    };
+    toTopBtn.onclick = () => box.scrollTop = 0;
+    const jump = d => {
+        const h = document.querySelector('.follow-item')?.offsetHeight || 110;
+        box.scrollTop = Math.max(0, Math.min(box.scrollHeight - box.clientHeight, box.scrollTop + d * h * 5));
+    };
+    up5Btn.onclick = () => jump(-1);
+    down5Btn.onclick = () => jump(1);
+    document.addEventListener('keydown', e => {
+        if (e.key === 'g')
+            toggleScroll.click();
+        if (e.key === 'h')
+            toTopBtn.click();
+        if (e.key === 'j')
+            up5Btn.click();
+        if (e.key === 'k')
+            down5Btn.click();
+        if (e.key === 'l')
+            gearToggle.click();
+    });
+    gearToggle.onclick = () => panel.classList.toggle('collapsed');
+
+    /* ---------- LIVE-STYLE CONTROL ---------- */
+    const bind = (i, v)=>document.getElementById(i)?.addEventListener('input', e => {
+        const val = e.target.type === 'number' ? e.target.value + 'px' : e.target.value;
+        document.documentElement.style.setProperty(v, val);
+    });
+    ['picSize--pic-sz', 'userColor--user-color', 'userSize--user-size', 'numColor--num-color', 'numSize--num-size',
+    'roleColor--role-color', 'roleSize--role-size', 'iconSize--icon-size',
+    'subColor--sub-color', 'subSize--sub-size', 'bitsColor--bits-color', 'bitsSize--bits-size',
+    'tipColor--tip-color', 'tipSize--tip-size',
+    'dateColor--date-color', 'dateSize--date-size', 'daysColor--days-color', 'daysSize--days-size',
+    'slotBG--slot-bg', 'slotBorder--slot-border', 'tintTop--tint-top', 'tintBottom--tint-bottom']
+    .forEach(s => {
+        const [id, varName] = s.split('--');
+        bind(id, '--' + varName);
+    });
+    tintEnable.onchange = e => document.documentElement.style.setProperty('--tint-on', e.target.checked ? 1 : 0);
+
+    /* sort selector */
+    sortSel.onchange = e => render(e.target.value);
+    </script>
+</body>
+</html>
