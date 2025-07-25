@@ -8,7 +8,8 @@
  * Action on a fixed schedule.  All secrets (CLIENT_ID, ACCESS_TOKEN,
  * BROADCASTER_LOGIN, CLIENT_SECRET, REFRESH_TOKEN) are consumed via
  * environment variables – they are never printed to stdout or written
- * to disk.  The generated JSON is written to `public/data/followers.json`.
+ * to disk.  The generated JSON is written to `docs/data/followers.json`,
+ * which is served by GitHub Pages.
  *
  * Usage: node buildFollowers.mjs
  */
@@ -320,7 +321,10 @@ async function build() {
     records: finalRecords,
   };
   // Ensure data directory exists
-  const outDir = path.join('public', 'data');
+  // Write output into the docs/data folder so GitHub Pages can serve it.  Note: GitHub Pages only
+  // supports deploying from the root or the `docs` directory, so we place the JSON under
+  // docs/data instead of public/data.
+  const outDir = path.join('docs', 'data');
   await fs.mkdir(outDir, { recursive: true });
   const outFile = path.join(outDir, 'followers.json');
   const json = JSON.stringify(out, null, 2);
